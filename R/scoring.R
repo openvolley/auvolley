@@ -66,7 +66,7 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
         dplyr::summarize(digs = sumnna(.data$set_wt), dig_points = .data$digs * scoring$dig)
 
     ## count sets per player separately from skills
-    px <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% group_by(.data$player_name, .data$player_id) %>% distinct(.data$match_id, .data$set_number) %>% dplyr::summarize(sets_played = n()) %>%
+    px <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% group_by(.data$player_name, .data$player_id) %>% distinct(.data$match_id, .data$set_number) %>% dplyr::summarize(sets_played = n()) %>% ungroup %>%
         ## TODO: weight by team sets, not individual? but count sets when on court, not having made an action, anyway
         left_join(servex, by = c("player_id")) %>%
         left_join(passx, by = c("player_id")) %>%
