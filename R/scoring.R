@@ -66,14 +66,25 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
         dplyr::summarize(digs = sumnna(.data$set_wt), dig_points = .data$digs * scoring$dig)
 
     ## count sets per player separately from skills
-    px <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% group_by(.data$player_name, .data$player_id) %>% distinct(.data$match_id, .data$set_number) %>% dplyr::summarize(sets_played = n()) %>% ungroup %>%
-        ## TODO: weight by team sets, not individual? but count sets when on court, not having made an action, anyway
-        left_join(servex, by = c("player_id")) %>%
-        left_join(passx, by = c("player_id")) %>%
-        left_join(setx, by = c("player_id")) %>%
-        left_join(attackx, by = c("player_id")) %>%
-        left_join(blockx, by = c("player_id")) %>%
-        left_join(digx, by = c("player_id")) %>%
+    temp <- dplyr::filter(x, !is.na(.data$player_id))
+    temp <- bind_rows(lapply(1:6, function(p) {
+        setNames(distinct(temp[, c("match_id", "set_number", paste0("home_player_id", p))]), c("match_id", "set_number", "player_id"))
+    }),
+    lapply(1:6, function(p) {
+        setNames(distinct(temp[, c("match_id", "set_number", paste0("visiting_player_id", p))]), c("match_id", "set_number", "player_id"))
+    }))
+    ## liberos won't appear in that
+    temp2 <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$match_id, .data$set_number, .data$player_id)
+    temp <- count(distinct(bind_rows(temp, temp2)), .data$player_id, name = "sets_played")
+
+    px <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$player_name, .data$player_id) %>%
+        left_join(temp, by = "player_id") %>%
+        left_join(servex, by = "player_id") %>%
+        left_join(passx, by = "player_id") %>%
+        left_join(setx, by = "player_id") %>%
+        left_join(attackx, by = "player_id") %>%
+        left_join(blockx, by = "player_id") %>%
+        left_join(digx, by = "player_id") %>%
         dplyr::filter(!is.na(.data$player_id))
     vrs <- c("aces", "serve_errors", "serve_points", "passes", "pass_errors", "pass_points", "assists", "set_errors", "set_points", "kills", "attack_errors", "attack_points", "blocks", "block_points", "digs", "dig_points")
     if (packageVersion("dplyr") >= "1.0.0") {
