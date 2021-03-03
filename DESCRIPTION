@@ -1,0 +1,22 @@
+Package: auvolley
+Title: Volleyball Scoring with the Athletes Unlimited Scoring System
+Version: 0.0.1
+Authors@R: c(person("Ben", "Raymond", role = c("aut", "cre"), email = "ben@untan.gl"),
+             person("Adrien", "Ickowicz", role = "aut"),
+             person("openvolley.org", role = "org"))
+Description: Volleyball scoring following the Athletes Unlimited scoring system.
+Depends: R (>= 3.3.0)
+Imports:
+  assertthat,
+  datavolley,
+  dplyr,
+  ovlytics,
+  rlang
+Suggests:
+  testthat
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Remotes: openvolley/datavolley, openvolley/ovlytics
