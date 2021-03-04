@@ -2,6 +2,12 @@
 #'
 #' The Athletes Unlimited league plays matches of 3 sets, each to 25 points. To apply their scoring system to normal volleyball games, we need to decide what to do with sets 4 and 5 (if played). If you only want to count things that happened in the first 3 (or 4) sets, then you should remove data rows associated with sets 5 and/or 4 before calling this function. Otherwise, the `set_5_weighting` parameter allows the count of actions from set 5 to be scaled.
 #'
+#' Most of the actions that are counted are self-explanatory: serve aces, attack kills, and serve, pass, attack, and set errors. The perhaps-less obvious ones:
+#' * A pass (serve reception) is counted if it is a perfect or positive pass
+#' * A set assist is a set that leads to an attack kill
+#' * Digs are counted on opposition attacks and block cover, if scouted, but not freeball passes. All dig grades except dig errors and digs directly back over the net are counted
+#' * Only block kills are counted
+#'
 #' @references https://auprosports.com/volleyball/how-we-play-volleyball/
 #' @param x datavolley or datavolleyplays: a datavolley object as returned by [datavolley::dv_read()], or the plays component of one
 #' @param set_5_weighting numeric: the weighting that should be applied to actions from the fifth set of a match (if it went that long)
@@ -44,7 +50,7 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
 
     ## setting
     setx <- mutate(x, next_outcome = lead(.data$evaluation)) %>% dplyr::filter(.data$skill == "Set") %>% group_by(.data$player_id) %>%
-        dplyr::summarize(assists = sumnna((.data$next_outcome == "Winning attack") * .data$set_wt), set_errors = sumnna((.data$evaluation == "Error") * .data$set_wt),
+        dplyr::summarize(assists = sumnna((.data$next_outcome == "Winning attack") * .data$set_wt), set_errors = sumnna(grepl("Error", .data$evaluation) * .data$set_wt),
                          set_points = sumnna(.data$assists * scoring$assist) + sumnna(.data$set_errors * scoring$set_error)) %>%
         ungroup
 
@@ -61,7 +67,9 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
 
     ## digs
     ## digs are also used for block cover, avoid these
-    digx <- dplyr::filter(x, ((lag(.data$skill) == "Attack" & lag(.data$team) != .data$team) | (lag(.data$skill, 2) == "Attack" & lag(.data$team, 2) != .data$team & lag(.data$skill) == "Block" & lag(.data$team) == .data$team)) & .data$skill == "Dig" & !(.data$evaluation %in% c("Ball directly back over net", "Error") | grepl("block cover", .data$evaluation))) %>%
+    ##digx <- dplyr::filter(x, ((lag(.data$skill) == "Attack" & lag(.data$team) != .data$team) | (lag(.data$skill, 2) == "Attack" & lag(.data$team, 2) != .data$team & lag(.data$skill) == "Block" & lag(.data$team) == .data$team)) & .data$skill == "Dig" & !(.data$evaluation %in% c("Ball directly back over net", "Error") | grepl("block cover", .data$evaluation))) %>%
+    ## no, count block cover too
+    digx <- dplyr::filter(x, .data$skill == "Dig" & !(.data$evaluation %in% c("Ball directly back over net", "Error"))) %>%
         group_by(.data$player_id) %>%
         dplyr::summarize(digs = sumnna(.data$set_wt), dig_points = .data$digs * scoring$dig)
 

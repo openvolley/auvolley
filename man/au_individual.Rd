@@ -29,6 +29,15 @@ A tibble
 \description{
 The Athletes Unlimited league plays matches of 3 sets, each to 25 points. To apply their scoring system to normal volleyball games, we need to decide what to do with sets 4 and 5 (if played). If you only want to count things that happened in the first 3 (or 4) sets, then you should remove data rows associated with sets 5 and/or 4 before calling this function. Otherwise, the \code{set_5_weighting} parameter allows the count of actions from set 5 to be scaled.
 }
+\details{
+Most of the actions that are counted are self-explanatory: serve aces, attack kills, and serve, pass, attack, and set errors. The perhaps-less obvious ones:
+\itemize{
+\item A pass (serve reception) is counted if it is a perfect or positive pass
+\item A set assist is a set that leads to an attack kill
+\item Digs are counted on opposition attacks and block cover, if scouted, but not freeball passes. All dig grades except dig errors and digs directly back over the net are counted
+\item Only block kills are counted
+}
+}
 \examples{
 x <- datavolley::dv_read(datavolley::dv_example_file())
 au_individual(x)
