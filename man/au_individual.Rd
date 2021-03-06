@@ -24,7 +24,12 @@ au_individual(
 \item{no_set_attacks}{character: a vector of attack codes for which sets are not expected (setter dumps, attacks on overpasses, second-ball attacks)}
 }
 \value{
-A tibble
+A tibble with a breakdown by player of points in each category, along with
+\itemize{
+\item \code{points} : each player's total points scored. If set 5 results have been included, points scored in set 5 will be scaled by \code{set_5_weighting}
+\item \code{points_per_set}: each player's total points divided by the number of sets they played
+\item \code{adjusted_points}: each player's total points but adjusted for game length. The \code{adjusted_points} = \code{points_per_set} * 3 * \code{nmatches} * \code{playing_time} where \code{nmatches} is the average number of matches played by each team, and \code{playing_time} is (number of sets played by the player) / (number of sets played by their team)
+}
 }
 \description{
 The Athletes Unlimited league plays matches of 3 sets, each to 25 points. To apply their scoring system to normal volleyball games, we need to decide what to do with sets 4 and 5 (if played). If you only want to count things that happened in the first 3 (or 4) sets, then you should remove data rows associated with sets 5 and/or 4 before calling this function. Otherwise, the \code{set_5_weighting} parameter allows the count of actions from set 5 to be scaled.

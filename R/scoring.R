@@ -15,7 +15,10 @@
 #' @param infer_sets logical: set this to `TRUE` if the scout has not included all setting actions. Some scouts will not include setting actions unless the set is an error, or made by the non-designated setter. Using `infer_sets = TRUE` will insert a new setting action (made by the on-court setter) on attacks that don't have a corresponding set action scouted (excluding those in `no_set_attacks`)
 #' @param no_set_attacks character: a vector of attack codes for which sets are not expected (setter dumps, attacks on overpasses, second-ball attacks)
 #'
-#' @return A tibble
+#' @return A tibble with a breakdown by player of points in each category, along with
+#' * `points` : each player's total points scored. If set 5 results have been included, points scored in set 5 will be scaled by `set_5_weighting`
+#' * `points_per_set`: each player's total points divided by the number of sets they played
+#' * `adjusted_points`: each player's total points but adjusted for game length. The `adjusted_points` = `points_per_set` * 3 * `nmatches` * `playing_time` where `nmatches` is the average number of matches played by each team, and `playing_time` is (number of sets played by the player) / (number of sets played by their team)
 #'
 #' @seealso [au_scoring()]
 #'
@@ -82,8 +85,13 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
         setNames(distinct(temp[, c("match_id", "set_number", paste0("visiting_player_id", p))]), c("match_id", "set_number", "player_id"))
     }))
     ## liberos won't appear in that
-    temp2 <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$match_id, .data$set_number, .data$player_id)
-    temp <- count(distinct(bind_rows(temp, temp2)), .data$player_id, name = "sets_played")
+    temp <- distinct(bind_rows(temp, dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$match_id, .data$set_number, .data$player_id)))
+
+    ## by match, sets played per player and sets total in the match
+    temp2 <- left_join(count(temp, .data$match_id, .data$player_id, name = "sets_played"), dplyr::summarize(group_by(temp, .data$match_id), match_n_sets = max(.data$set_number)), by = "match_id")
+
+    ## sets played per player and playing time of a player as (number of sets played by player) / (number of sets played by their team)
+    temp <- dplyr::summarize(group_by(temp2, .data$player_id), prop_playing_time = sum(.data$sets_played) / sum(.data$match_n_sets), sets_played = sum(.data$sets_played))
 
     px <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$player_name, .data$player_id) %>%
         left_join(temp, by = "player_id") %>%
@@ -100,9 +108,14 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
     } else {
         px <- dplyr::mutate_at(px, vrs, na_to_0)
     }
-    px %>% mutate(points = .data$serve_points + .data$pass_points + .data$set_points + .data$attack_points + .data$block_points + .data$dig_points,
-               points_per_set = .data$points / .data$sets_played) %>%
-        dplyr::arrange(desc(.data$points_per_set))
+    px <- dplyr::arrange(mutate(px, points = .data$serve_points + .data$pass_points + .data$set_points + .data$attack_points + .data$block_points + .data$dig_points,
+               points_per_set = .data$points / .data$sets_played), desc(.data$points_per_set))
+
+    ## "adjusted" points, i.e. total points per player but normalized to 3-set matches, same number of matches per team, and average playing time per player
+    ## average number of matches per team
+    nmatches <- tryCatch(round(mean(pull(count(na.omit(distinct(x, .data$match_id, .data$team_id)), .data$team_id), .data$n))), error = function(e) 10)
+    px <- mutate(px, adjusted_points = .data$points_per_set * 3 * nmatches * .data$prop_playing_time)
+    px[, c(setdiff(names(px), c("prop_playing_time", "points_per_set")), "points_per_set")]
 
 }
 
