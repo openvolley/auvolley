@@ -79,19 +79,27 @@ au_individual <- function(x, set_5_weighting = 25/15, scoring = au_scoring(), in
     ## count sets per player separately from skills
     temp <- dplyr::filter(x, !is.na(.data$player_id))
     temp <- bind_rows(lapply(1:6, function(p) {
-        setNames(distinct(temp[, c("match_id", "set_number", paste0("home_player_id", p))]), c("match_id", "set_number", "player_id"))
+        setNames(distinct(temp[, c("match_id", "set_number", "home_team_id", paste0("home_player_id", p))]), c("match_id", "set_number", "team_id", "player_id"))
     }),
     lapply(1:6, function(p) {
-        setNames(distinct(temp[, c("match_id", "set_number", paste0("visiting_player_id", p))]), c("match_id", "set_number", "player_id"))
+        setNames(distinct(temp[, c("match_id", "set_number", "visiting_team_id", paste0("visiting_player_id", p))]), c("match_id", "set_number", "team_id", "player_id"))
     }))
     ## liberos won't appear in that
-    temp <- distinct(bind_rows(temp, dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$match_id, .data$set_number, .data$player_id)))
+    temp <- distinct(bind_rows(temp, dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$match_id, .data$set_number, .data$team_id, .data$player_id)))
+
+    ## all matches, n sets, with team_id
+    xmt <- dplyr::summarize(group_by(na.omit(distinct(x, .data$match_id, .data$set_number, .data$team_id)), .data$match_id, .data$team_id), match_n_sets = max(.data$set_number))
+    xmt <- dplyr::summarize(group_by(xmt, .data$team_id), team_sets_total = sum(.data$match_n_sets))
 
     ## by match, sets played per player and sets total in the match
-    temp2 <- left_join(count(temp, .data$match_id, .data$player_id, name = "sets_played"), dplyr::summarize(group_by(temp, .data$match_id), match_n_sets = max(.data$set_number)), by = "match_id")
+    temp2 <- group_by(count(temp, .data$match_id, .data$team_id, .data$player_id, name = "sets_played"), .data$player_id, .data$team_id) %>%
+        dplyr::summarize(sets_played = sum(.data$sets_played)) %>% ungroup
+    temp2 <- left_join(temp2, xmt, by = "team_id")
+    ## can't estimate team_sets_total for players that appear in multiple teams
+    temp2$team_sets_total[temp2$player_id %in% temp2$player_id[duplicated(temp2$player_id)]] <- NA
 
     ## sets played per player and playing time of a player as (number of sets played by player) / (number of sets played by their team)
-    temp <- dplyr::summarize(group_by(temp2, .data$player_id), prop_playing_time = sum(.data$sets_played) / sum(.data$match_n_sets), sets_played = sum(.data$sets_played))
+    temp <- dplyr::summarize(group_by(temp2, .data$player_id), prop_playing_time = sum(.data$sets_played) / sum(.data$team_sets_total), sets_played = sum(.data$sets_played))
 
     px <- dplyr::filter(x, !is.na(.data$player_name) & !is.na(.data$player_id)) %>% distinct(.data$player_name, .data$player_id) %>%
         left_join(temp, by = "player_id") %>%
