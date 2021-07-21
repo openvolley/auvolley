@@ -1,6 +1,6 @@
 Package: auvolley
 Title: Volleyball Scoring with the Athletes Unlimited Scoring System
-Version: 0.0.6
+Version: 0.0.7
 Authors@R: c(person("Ben", "Raymond", role = c("aut", "cre"), email = "ben@untan.gl"),
              person("Adrien", "Ickowicz", role = "aut"),
              person("openvolley.org", role = "org"))
@@ -10,7 +10,7 @@ Imports:
   assertthat,
   datavolley,
   dplyr,
-  ovlytics,
+  ovlytics (>= 0.1.5),
   rlang
 Suggests:
   testthat
