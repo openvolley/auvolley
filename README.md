@@ -14,12 +14,14 @@ status](https://github.com/openvolley/auvolley/workflows/R-CMD-check/badge.svg)]
 ## Installation
 
 ``` r
-install.packages("datavolley", repos = "https://openvolley.r-universe.dev")
+options(repos = c(openvolley = "https://openvolley.r-universe.dev",
+                  CRAN = "https://cloud.r-project.org"))
+install.packages("auvolley")
 
 ## or
 
 ## install.packages("remotes") ## if needed
-remotes::install_github("openvolley/datavolley")
+remotes::install_github("openvolley/auvolley")
 ```
 
 The `auvolley` package provides some simple functions for calculating
